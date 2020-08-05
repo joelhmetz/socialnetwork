@@ -1,2 +1,2 @@
 # socialnetwork
-API - Laravel and React
+Laravel API to be consumed.
