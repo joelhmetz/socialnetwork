@@ -14,55 +14,45 @@ class AuthController extends Controller
         $this->middleware('auth:api', ['except' => ['login', 'create', 'unauthorized']]);
     }
 
-    public function create(Request $request){
-        // POST *api/user (name, email, password, birthdate)
-        $array = ['error' => ''];
+    public function unauthorized(){
+        return response()->json(['error'=>'Não autorizado'], 401);
+    }
 
-        $name = $request->input('name');
+    public function login(Request $request){
+        $array = ['error' => ''];
+   
         $email = $request->input('email');
         $password = $request->input('password');
-        $birthdate = $request->input('birthdate');
 
-        if($name && $email && $password && $birthdate){
-            // Validando a data de nascimento
-            if(strtotime($birthdate) === false){
-                $array['error'] = 'Data de nascimento inválida.';
+        if($email && $password){
+            $token = auth()->attempt([
+                'email' => $email,
+                'password' => $password
+            ]);
+    
+            if(!$token){
+                $array['error'] = 'E-mail e/ou senha errados!';
                 return $array;
             }
-            // Verificar se existe e-mail
-            $emailExists = User::where('email', $email)->count();
-            if($emailExists === 0){
-                
-                $hash = password_hash($password, PASSWORD_DEFAULT);
-
-                $user = new User();
-                $user->name = $name;
-                $user->email = $email;
-                $user->password = $hash;
-                $user->birthdate = $birthdate;
-                $user->save();
-
-                $token = auth()->attempt([
-                    'email' => $email,
-                    'password' => $password
-                ]);
-
-                if(!$token){
-                    $array['error'] = 'Ocorreu um erro.';
-                    return $array;
-                }
-
-                $array['token'] = $token;
-
-            }else{
-                $array['error'] = 'E-mail já está em uso.';
-                return $array;
-            }
-        }else{
-            $array['error'] = 'Não enviou todos os campos.'; 
+    
+            $array['token'] = $token;    
             return $array;
         }
-
+        
+        $array['error'] = 'Dados não enviados!';
         return $array;
     }
+
+    public function logout(){
+        auth()->logout();
+        return ['error'=>''];
+    }
+
+    public function refresh(){
+        $token = auth()->refresh();
+        return [
+            'error'=> '',
+            'token'=> $token
+        ];
+    }    
 }
