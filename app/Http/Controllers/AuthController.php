@@ -11,7 +11,7 @@ use App\User;
 class AuthController extends Controller
 {
     public function __construct(){
-        $this->middleware('auth:api', ['except' => ['login', 'create', 'unauthorized']]);
+        $this->middleware('auth:api', ['except' => ['login', 'unauthorized']]);
     }
 
     public function unauthorized(){
