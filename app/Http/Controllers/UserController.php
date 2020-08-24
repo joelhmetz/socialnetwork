@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use App\User;
 use Image;
+
 
 class UserController extends Controller
 {
@@ -16,57 +18,47 @@ class UserController extends Controller
         $this->loggedUser = auth()->user();
     }
 
-    public function create(Request $request){
-        // POST *api/user (name, email, password, birthdate)
+    public function create(Request $request) {
         $array = ['error' => ''];
+        $data = $request->only([
+            'name',
+            'email',
+            'password',
+            'birthdate',
+        ]);
 
-        $name = $request->input('name');
-        $email = $request->input('email');
-        $password = $request->input('password');
-        $birthdate = $request->input('birthdate');
-
-        if($name && $email && $password && $birthdate){
-            // Validando a data de nascimento
-            if(strtotime($birthdate) === false){
-                $array['error'] = 'Data de nascimento inválida.';
-                return $array;
-            }
-            // Verificar se existe e-mail
-            $emailExists = User::where('email', $email)->count();
-            if($emailExists === 0){
-                
-                $hash = password_hash($password, PASSWORD_DEFAULT);
-
-                $user = new User();
-                $user->name = $name;
-                $user->email = $email;
-                $user->password = $hash;
-                $user->birthdate = $birthdate;
-                $user->save();
-
-                $token = auth()->attempt([
-                    'email' => $email,
-                    'password' => $password
-                ]);
-
-                if(!$token){
-                    $array['error'] = 'Ocorreu um erro.';
-                    return $array;
-                }
-
-                $array['token'] = $token;
-
-            }else{
-                $array['error'] = 'E-mail já está em uso.';
-                return $array;
-            }
-        }else{
-            $array['error'] = 'Não enviou todos os campos.'; 
-            return $array;
+        $validator = Validator::make(
+            $data,
+            [
+                'name' => ['required', 'string', 'max:100'],
+                'email' => ['required', 'string', 'email', 'max:100', 'unique:users'],
+                'password' => ['required', 'string', 'min:6'],
+                'birthdate' => ['required', 'date'],
+            ]
+        );
+        if ($validator->fails())
+        {
+            $array['error'] = $array['error'] = $validator->errors();
+            return json_encode($array, JSON_UNESCAPED_UNICODE);
         }
+        else
+        {
+            $array['data'] = $request->all();
 
-        return $array;
+            $user = new User;
+            $user->name = $request->input('name');
+            $user->email = $request->input('email');
+            $hash = password_hash($request->input('password'), PASSWORD_DEFAULT);
+            $user->password = $hash;
+            $user->birthdate = $request->input('birthdate');
+            $user->save();
+
+            return json_encode($array, JSON_UNESCAPED_UNICODE);
+
+        }
     }
+
+
 
     public function update(Request $request){
         // PUT api/user (name, email, birthdate, city, work, password, password_confirm)
